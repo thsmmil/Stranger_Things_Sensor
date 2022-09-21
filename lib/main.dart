@@ -1,14 +1,17 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/src/foundation/key.dart';
+import 'package:flutter/foundation.dart' as foundation;
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:proximity_sensor/proximity_sensor.dart';
 import 'package:torch_light/torch_light.dart';
 import 'package:vibration/vibration.dart';
+import 'package:proximity_sensor/proximity_sensor.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -20,7 +23,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
           primarySwatch: Colors.blue,
           visualDensity: VisualDensity.adaptivePlatformDensity),
-      home: MyHomePage(),
+      home: const MyHomePage(),
     );
   }
 }
@@ -34,6 +37,42 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   bool isOn = false;
+  bool isNear = false;
+  String path = 'img/demogorgon.jpg';
+  late StreamSubscription<dynamic> streamSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    listenSensor();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    streamSubscription.cancel();
+  }
+
+  Future<void> listenSensor() async {
+    FlutterError.onError = (FlutterErrorDetails details) {
+      if (foundation.kDebugMode) {
+        FlutterError.dumpErrorToConsole(details);
+      }
+    };
+    streamSubscription = ProximitySensor.events.listen((int event) {
+      setState(() {
+        isNear = (event > 0) ? true : false;
+        if (isNear == true) {
+          _torchLight();
+          _vibrate();
+          path = 'img/eleven.jpg';
+        } else {
+          _torchLight();
+          path = 'img/demogorgon.jpg';
+        }
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,15 +81,13 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton(
-              onPressed: _torchLight,
-              child: const Text('Turn on/off light'),
+            Image.asset(
+              path,
+              width: 300,
+              height: 300,
+              alignment: Alignment.center,
             ),
-            ElevatedButton(
-              onPressed: _vibrate,
-              child: const Text('Vibrate'),
-            )
-            //Text('Está próximo do sensor: $isNear')
+            Text('Está próximo do sensor: $isNear')
           ],
         ),
       ),
@@ -76,6 +113,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _vibrate() async {
-    Vibration.vibrate(duration: 1000, amplitude: 128);
+    Vibration.vibrate(duration: 1500, amplitude: 128);
   }
 }
